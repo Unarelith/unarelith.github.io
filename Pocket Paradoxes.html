@@ -32,7 +32,7 @@
 				position: relative; z-index: 2; flex: 0 0 auto;
 				display: grid; grid-template-columns: 156px minmax(56px, 1fr) 72px;
 				align-items: center; gap: clamp(4px, 2vw, 16px);
-				width: min(100%, 520px); min-height: 202px;
+				width: min(100%, 520px); min-height: 202px; margin-top: auto;
 				padding: 32px max(8px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 				background: transparent; user-select: none; -webkit-user-select: none;
 				-webkit-touch-callout: none; touch-action: none; pointer-events: auto;
@@ -51,7 +51,8 @@
 			.d-pad-down { grid-area: 3 / 2; }
 			.d-pad::after { content: ""; grid-area: 2 / 2; border-radius: 3px; background: rgba(128, 128, 128, .25); }
 			.start-button { justify-self: center; width: 56px; height: 28px; transform: translateY(-24px); border-radius: 999px; font-size: 11px; letter-spacing: 1px; }
-			.a-button { width: 72px; height: 72px; border-radius: 50%; font-size: 24px; }
+			.action-buttons { display: flex; flex-direction: column; gap: 8px; }
+			.a-button, .b-button { width: 72px; height: 72px; border-radius: 50%; font-size: 24px; }
 		}
 	</style>
 	<link id="-gd-engine-icon" rel="icon" type="image/png" href="Pocket Paradoxes.icon.png" />
@@ -69,7 +70,8 @@
 				<button class="control-button d-pad-down" type="button" data-key="ArrowDown" data-key-code="40" data-repeat aria-label="Down">&#9660;</button>
 			</div>
 			<button class="control-button start-button" type="button" data-key="Escape" data-key-code="27" aria-label="Start, pause or back">START</button>
-			<button class="control-button a-button" type="button" data-key="Enter" data-key-code="13" aria-label="A, confirm">A</button>
+			<div class="action-buttons"><button class="control-button a-button" type="button" data-key="Enter" data-key-code="13" aria-label="A, confirm">A</button>
+			<button class="control-button b-button" type="button" data-key="z" data-code="KeyZ" data-key-code="90" aria-label="B, undo or back">B</button></div>
 		</div>
 	</main>
 	<div id="status" role="status">
@@ -79,7 +81,7 @@
 	<noscript>JavaScript is required to play.</noscript>
 	<script src="Pocket Paradoxes.js"></script>
 	<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"Pocket Paradoxes","experimentalVK":false,"fileSizes":{"Pocket Paradoxes.pck":29305100,"Pocket Paradoxes.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"Pocket Paradoxes","experimentalVK":false,"fileSizes":{"Pocket Paradoxes.pck":42825032,"Pocket Paradoxes.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -93,6 +95,8 @@ const engine = new Engine(GODOT_CONFIG);
 	const notice = document.getElementById('status-notice');
 	const heldControls = new Map();
 	let ready = false;
+	let pixelPerfect = true;
+	window.pocketSetPixelPerfect = (enabled) => { pixelPerfect = enabled; resizeCanvas(); };
 
 	// Resize policy 0: the page owns CSS and drawing-buffer sizes. Godot uses
 	// this same buffer for rendering and for mapping mouse/touch coordinates.
@@ -100,7 +104,8 @@ const engine = new Engine(GODOT_CONFIG);
 		const topInset = parseFloat(getComputedStyle(shell).paddingTop) || 0;
 		const availableHeight = Math.max(1, shell.clientHeight - controller.getBoundingClientRect().height - topInset);
 		const fit = Math.min(shell.clientWidth / 160, availableHeight / 144);
-		const scale = mobile.matches ? fit : Math.min(6, fit >= 1 ? Math.floor(fit) : fit);
+		const ratio = window.devicePixelRatio || 1;
+		const scale = pixelPerfect && fit * ratio >= 1 ? Math.floor(fit * ratio) / ratio : fit;
 		canvas.style.width = `${160 * scale}px`;
 		canvas.style.height = `${144 * scale}px`;
 		// Keep the drawing buffer an exact integer multiple of the native game.
@@ -127,7 +132,7 @@ const engine = new Engine(GODOT_CONFIG);
 	function sendKey(button, type, repeat = false) {
 		const keyCode = Number(button.dataset.keyCode);
 		canvas.dispatchEvent(new KeyboardEvent(type, {
-			key: button.dataset.key, code: button.dataset.key, keyCode, which: keyCode,
+			key: button.dataset.key, code: button.dataset.code || button.dataset.key, keyCode, which: keyCode,
 			repeat, bubbles: true, cancelable: true,
 		}));
 	}
